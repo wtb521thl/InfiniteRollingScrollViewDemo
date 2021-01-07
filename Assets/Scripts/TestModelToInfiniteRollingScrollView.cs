@@ -17,7 +17,7 @@ public class TestModelToInfiniteRollingScrollView : MonoBehaviour
     void Start()
     {
         infiniteRollingScrollView.AddItemByTransform(testObjTrans);
-        infiniteRollingScrollView.ChangeNodeSelectStateAction += ChangeNodeSelectStateAction;
+        infiniteRollingScrollView.ClickNodeAction += ClickNodeAction;
 
         normalMat = new Material(Shader.Find("Standard"));
         normalMat.color = Color.white;
@@ -31,13 +31,35 @@ public class TestModelToInfiniteRollingScrollView : MonoBehaviour
         }
     }
 
-    private void ChangeNodeSelectStateAction(NodeItem obj, bool isSelect)
+    NodeItemSerializable[] lastClickInfos;
+
+    private void ClickNodeAction(NodeItemSerializable[] nodeInfos)
     {
-        GameObject tempObj = GameObject.Find(obj.nodeInfo.nodeName);
-        Renderer renderer = tempObj.GetComponent<Renderer>();
-        if (renderer)
+
+        if (lastClickInfos != null)
         {
-            renderer.sharedMaterial = isSelect ? selectMat : normalMat;
+            for (int i = 0; i < lastClickInfos.Length; i++)
+            {
+                GameObject tempObj = GameObject.Find(lastClickInfos[i].nodeName);
+                Renderer renderer = tempObj.GetComponent<Renderer>();
+                if (renderer)
+                {
+                    renderer.sharedMaterial = normalMat;
+                }
+            }
         }
+
+        for (int i = 0; i < nodeInfos.Length; i++)
+        {
+            GameObject tempObj = GameObject.Find(nodeInfos[i].nodeName);
+            Renderer renderer = tempObj.GetComponent<Renderer>();
+            if (renderer)
+            {
+                renderer.sharedMaterial = selectMat;
+            }
+        }
+
+        lastClickInfos = nodeInfos;
     }
+
 }
