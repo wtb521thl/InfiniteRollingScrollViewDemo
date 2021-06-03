@@ -18,6 +18,7 @@ public class TestModelToInfiniteRollingScrollView : MonoBehaviour
     {
         infiniteRollingScrollView.AddItemByTransform(testObjTrans);
         infiniteRollingScrollView.ClickNodeAction += ClickNodeAction;
+        infiniteRollingScrollView.RefreshNodeItemChildInfo();
 
         normalMat = new Material(Shader.Find("Standard"));
         normalMat.color = Color.white;

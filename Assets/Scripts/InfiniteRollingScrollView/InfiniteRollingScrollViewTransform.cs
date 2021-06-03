@@ -25,21 +25,28 @@ namespace Tianbo.Wang
         }
 
 
-        public void AddItemByTransform(Transform tempCurTrans)
+        public NodeItemSerializable AddItemByTransform(Transform tempCurTrans, Transform parentTrans = null, int level = 0)
         {
-            AddItemByTransformFunc(tempCurTrans, null, 0);
-            RefreshNodeItemChildInfo();
+            return AddItemByTransformFunc(tempCurTrans, parentTrans, level);
         }
 
 
         NodeItemSerializable AddItemByTransformFunc(Transform tempCurTrans, Transform parentTrans, int curLevel, NodeItemSerializable parent = null)
         {
+
             if (CantAddCondititon(tempCurTrans))
             {
                 return null;
             }
-            string tempName = tempCurTrans.name;
-
+            string tempName = tempCurTrans.name.Split(new string[] { "||" }, StringSplitOptions.None)[0];
+            //if (ModelManager.Instance.allObjectShowNames.ContainsKey(tempCurTrans.name))
+            //{
+            //    tempName = ModelManager.Instance.allObjectShowNames[tempCurTrans.name];
+            //    if (string.IsNullOrEmpty(tempName))
+            //    {
+            //        tempName = tempCurTrans.name.Split(new string[] { "||" }, StringSplitOptions.None)[0];
+            //    }
+            //}
             string tempParentName = "";
             if (parentTrans != null)
             {
@@ -54,7 +61,7 @@ namespace Tianbo.Wang
                 curLevel += 1;
                 for (int i = 0; i < tempCurTrans.childCount; i++)
                 {
-                    if (CantAddCondititon(tempCurTrans))
+                    if (CantAddCondititon(tempCurTrans.GetChild(i)))
                     {
                         continue;
                     }
@@ -64,6 +71,29 @@ namespace Tianbo.Wang
             curItem.childNodes = childItem;
 
             return curItem;
+        }
+
+        public void RemoveCurRootNodes(Transform tempCurTrans)
+        {
+            Transform[] allChildTrans = tempCurTrans.GetComponentsInChildren<Transform>();
+            for (int i = 0; i < allChildTrans.Length; i++)
+            {
+                for (int j = allNodesInfo.Count - 1; j >= 0; j--)
+                {
+                    if (allNodesInfo[j].nodeParam == allChildTrans[i].name)
+                    {
+                        if (allNodesInfo[j].parentNode != null)
+                        {
+                            allNodesInfo[j].parentNode.childNodes.Remove(allNodesInfo[j]);
+                            allNodesInfo.RemoveAt(j);
+                        }
+                        else
+                        {
+                            allNodesInfo.RemoveAt(j);
+                        }
+                    }
+                }
+            }
         }
     }
 }

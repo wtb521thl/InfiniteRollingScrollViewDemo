@@ -200,9 +200,13 @@ namespace Tianbo.Wang
         /// <summary>
         /// 子节点
         /// </summary>
+        [NonSerialized]
         public List<NodeItemSerializable> childNodes = new List<NodeItemSerializable>();
 
+        public NodeItemSerializable()
+        {
 
+        }
 
         public NodeItemSerializable(string _nodeName, string _itemParentName, int _nodeLevel, string _nodeParam = "")
         {
