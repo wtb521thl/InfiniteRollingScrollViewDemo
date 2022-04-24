@@ -16,6 +16,8 @@ public class TestModelToInfiniteRollingScrollView : MonoBehaviour
 
     void Start()
     {
+        GameObjectIDHelper.InitDic(testObjTrans.gameObject, null);
+
         infiniteRollingScrollView.AddItemByTransform(testObjTrans);
         infiniteRollingScrollView.ClickNodeAction += ClickNodeAction;
         infiniteRollingScrollView.RefreshNodeItemChildInfo();

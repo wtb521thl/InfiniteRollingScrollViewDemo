@@ -38,21 +38,13 @@ namespace Tianbo.Wang
             {
                 return null;
             }
-            string tempName = tempCurTrans.name.Split(new string[] { "||" }, StringSplitOptions.None)[0];
-            //if (ModelManager.Instance.allObjectShowNames.ContainsKey(tempCurTrans.name))
-            //{
-            //    tempName = ModelManager.Instance.allObjectShowNames[tempCurTrans.name];
-            //    if (string.IsNullOrEmpty(tempName))
-            //    {
-            //        tempName = tempCurTrans.name.Split(new string[] { "||" }, StringSplitOptions.None)[0];
-            //    }
-            //}
+            string tempName = tempCurTrans.name;
             string tempParentName = "";
             if (parentTrans != null)
             {
-                tempParentName = parentTrans.name;
+                tempParentName = GameObjectIDHelper.GetID(parentTrans.gameObject);
             }
-            NodeItemSerializable curItem = new NodeItemSerializable(tempName, tempParentName, curLevel, tempCurTrans.name);
+            NodeItemSerializable curItem = new NodeItemSerializable(tempName, tempParentName, curLevel, GameObjectIDHelper.GetID(tempCurTrans.gameObject));
             curItem.parentNode = parent;
             allNodesInfo.Add(curItem);
             List<NodeItemSerializable> childItem = new List<NodeItemSerializable>();
@@ -78,21 +70,7 @@ namespace Tianbo.Wang
             Transform[] allChildTrans = tempCurTrans.GetComponentsInChildren<Transform>();
             for (int i = 0; i < allChildTrans.Length; i++)
             {
-                for (int j = allNodesInfo.Count - 1; j >= 0; j--)
-                {
-                    if (allNodesInfo[j].nodeParam == allChildTrans[i].name)
-                    {
-                        if (allNodesInfo[j].parentNode != null)
-                        {
-                            allNodesInfo[j].parentNode.childNodes.Remove(allNodesInfo[j]);
-                            allNodesInfo.RemoveAt(j);
-                        }
-                        else
-                        {
-                            allNodesInfo.RemoveAt(j);
-                        }
-                    }
-                }
+                RemoveOne(GameObjectIDHelper.GetID(allChildTrans[i].gameObject));
             }
         }
     }

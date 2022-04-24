@@ -59,6 +59,12 @@ namespace Tianbo.Wang
         /// </summary>
         public bool isStatic = false;
 
+        /// <summary>
+        /// 是否只能点击icon开启子物体
+        /// </summary>
+        public bool isClickIconOpen = false;
+
+
         public Action<NodeItem> MouseEnterAction;
 
         public Action<NodeItem> MouseExitAction;
@@ -73,7 +79,6 @@ namespace Tianbo.Wang
             EventTriggerListener.Get(gameObject).onClick += ItemClick;
             EventTriggerListener.Get(gameObject).onEnter += ItemEnter;
             EventTriggerListener.Get(gameObject).onExit += ItemExit;
-
             ItemExit(gameObject);
 
         }
@@ -93,9 +98,18 @@ namespace Tianbo.Wang
         /// </summary>
         /// <param name="isOpen">是否打开状态</param>
         /// <param name="isStatic">是否是静态的，不可以点击</param>
-        public void Init(bool isParent, bool _isStatic = false)
+        public void Init(bool isParent, bool _isStatic = false, bool _isClickIconOpen = false)
         {
-
+            isClickIconOpen = _isClickIconOpen;
+            if (isClickIconOpen)
+            {
+                iconImage.raycastTarget = true;
+                EventTriggerListener.Get(iconImage.gameObject).onClick = ItemClickIcon;
+            }
+            else
+            {
+                iconImage.raycastTarget = false;
+            }
             isStatic = _isStatic;
             if (!isStatic)
             {
@@ -121,11 +135,20 @@ namespace Tianbo.Wang
             SelectNodeAction?.Invoke(this, _isSelecter);
         }
 
-
-        private void ItemClick(GameObject go)
+        private void ItemClickIcon(GameObject go)
         {
             Open = !Open;
             nodeInfo.isOpen = Open;
+            MouseClickAction?.Invoke(this);
+        }
+
+        private void ItemClick(GameObject go)
+        {
+            if (!isClickIconOpen)
+            {
+                Open = !Open;
+                nodeInfo.isOpen = Open;
+            }
             MouseClickAction?.Invoke(this);
         }
 

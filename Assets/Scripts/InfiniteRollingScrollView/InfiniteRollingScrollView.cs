@@ -108,6 +108,11 @@ namespace Tianbo.Wang
         public bool clickSpaceAreaUnSelect = false;
 
         /// <summary>
+        /// 是否只能点击icon开启子物体
+        /// </summary>
+        public bool isClickIconOpen = false;
+
+        /// <summary>
         /// 用一个bool区分 点击的是物体还是node
         /// </summary>
         bool inSideClick = false;
@@ -140,6 +145,16 @@ namespace Tianbo.Wang
         public Scrollbar scrollbar;
 
         bool isClick = false;
+
+        public Canvas canvas;
+
+        private void Awake()
+        {
+            if (scrollbar != null)
+            {
+                scrollbar.onValueChanged.AddListener(ScrollBarChange);
+            }
+        }
 
         private void Update()
         {
@@ -252,6 +267,62 @@ namespace Tianbo.Wang
         }
 
         /// <summary>
+        /// 删除一个节点
+        /// </summary>
+        /// <param name="removeItemParam"></param>
+        public void RemoveOne(string removeItemParam)
+        {
+            for (int i = allNodesInfo.Count - 1; i >= 0; i--)
+            {
+                if (allNodesInfo[i].nodeParam == removeItemParam)
+                {
+                    if (allNodesInfo[i].parentNode != null)
+                    {
+                        allNodesInfo[i].parentNode.childNodes.Remove(allNodesInfo[i]);
+                        allNodesInfo.RemoveAt(i);
+                    }
+                    else
+                    {
+                        allNodesInfo.RemoveAt(i);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 删除自己和孩子
+        /// </summary>
+        /// <param name="removeNodeParam"></param>
+        public void RemoveNodeAndChilds(string removeNodeParam)
+        {
+            for (int i = allNodesInfo.Count - 1; i >= 0; i--)
+            {
+                if (allNodesInfo[i].nodeParam == removeNodeParam)
+                {
+                    if (allNodesInfo[i].parentNode != null)
+                    {
+                        allNodesInfo[i].parentNode.childNodes.Remove(allNodesInfo[i]);
+                    }
+                    RemoveSelfAndChilds(allNodesInfo[i]);
+                    break;
+                }
+            }
+        }
+
+        void RemoveSelfAndChilds(NodeItemSerializable nodeItemSerializable)
+        {
+            allNodesInfo.Remove(nodeItemSerializable);
+            if (nodeItemSerializable.childNodes != null)
+            {
+                for (int i = 0; i < nodeItemSerializable.childNodes.Count; i++)
+                {
+                    RemoveSelfAndChilds(nodeItemSerializable.childNodes[i]);
+                }
+            }
+        }
+
+
+        /// <summary>
         /// 把信息添加进来后设置一下父子关系
         /// </summary>
         public void SetChildAndParent()
@@ -292,12 +363,6 @@ namespace Tianbo.Wang
             NodeItem tempNodeItem = tempItem.GetComponent<NodeItem>();
             tempNodeItem.nodeInfo.nodeName = changeItemParam;
 
-            //GameObject tempParentItem = allNodeObjs.Find((p) => { return p.GetComponent<NodeItem>().nodeInfo.parentNode != null && p.GetComponent<NodeItem>().nodeInfo.parentNode.nodeParam == oldParamName; });
-            //if (tempParentItem != null)
-            //{
-            //    tempParentItem.GetComponent<NodeItem>().nodeInfo.parentNode.nodeParam = changeItemParam;
-            //}
-            RefreshSelfActiveState();
         }
 
 
@@ -319,12 +384,8 @@ namespace Tianbo.Wang
         /// </summary>
         public void RefreshNodeItemChildInfo()
         {
-            selfRect = GetComponent<RectTransform>();
-
-            if (scrollbar != null)
-            {
-                scrollbar.onValueChanged.AddListener(ScrollBarChange);
-            }
+            if (selfRect == null)
+                selfRect = GetComponent<RectTransform>();
 
             beforeNodes.Clear();
             afterNodes.Clear();
@@ -334,40 +395,47 @@ namespace Tianbo.Wang
             tempChildRect = Resources.Load<GameObject>(prefabPath).GetComponent<RectTransform>();
             tempItemHeight = tempChildRect.GetSize().y;
 
-            float tempSelfHeight = selfRect.GetSize().y / GameObject.Find("Canvas").transform.localScale.y;
+            float tempSelfHeight = selfRect.GetSize().y / canvas.transform.localScale.y;
 
             if (tempSelfHeight < 0)
             {
                 tempSelfHeight = -tempSelfHeight;
             }
-
-            curShowObjLastIndex = (int)(tempSelfHeight / tempItemHeight + 1);
-
-            SetScrollBarValue();
-
+            int tempInt = (int)(tempSelfHeight / tempItemHeight + 1);
+            curShowObjLastIndex = Mathf.Min(canShowNodes.Count, tempInt);
             if (!isStaticAndOpenAlways)
             {
-                maxShowNodeObjsCount = curShowObjLastIndex;
+                maxShowNodeObjsCount = tempInt;
             }
             else
             {
                 maxShowNodeObjsCount = canShowNodes.Count;
             }
 
-            InitScrollViewNodes();
+            RefreshNodesObjs();
         }
 
+        /// <summary>
+        /// 手动拖动滑动条事件
+        /// </summary>
+        /// <param name="arg0"></param>
         private void ScrollBarChange(float arg0)
         {
             curShowObjLastIndex = Mathf.Clamp((int)((canShowNodes.Count - allNodeObjs.Count) * arg0 + allNodeObjs.Count), allNodeObjs.Count, canShowNodes.Count);
-            InitScrollViewNodes();
+            RefreshCanShowItem();
+            RefreshNodesObjs();
         }
 
         void SetScrollBarValue()
         {
             if (scrollbar != null)
             {
-                scrollbar.SetValueWithoutNotify((float)(curShowObjLastIndex - allNodeObjs.Count) / (float)(canShowNodes.Count - allNodeObjs.Count));
+                float tempValue = (float)(curShowObjLastIndex + 1 - allNodeObjs.Count) / (float)(canShowNodes.Count - allNodeObjs.Count);
+                if (canShowNodes.Count - allNodeObjs.Count <= 0)
+                {
+                    tempValue = 0;
+                }
+                scrollbar.SetValueWithoutNotify(Mathf.Clamp01(tempValue));
             }
         }
 
@@ -409,13 +477,6 @@ namespace Tianbo.Wang
                     GetChildActiveNodes(allNodesInfo[i]);
                 }
             }
-
-
-            if (scrollbar != null)
-            {
-                curShowObjLastIndex = Mathf.Clamp((int)((canShowNodes.Count - allNodeObjs.Count) * scrollbar.value + allNodeObjs.Count), allNodeObjs.Count, canShowNodes.Count);
-            }
-
         }
 
         /// <summary>
@@ -449,12 +510,10 @@ namespace Tianbo.Wang
         }
 
         /// <summary>
-        /// 刷新scrollView的size等信息
+        /// 刷新节点物体 ，多余的删除，缺少的生成
         /// </summary>
-        private void InitScrollViewNodes()
+        private void RefreshNodesObjs()
         {
-
-            //多余的删除，缺少的生成
             int offset = Mathf.Min(canShowNodes.Count, maxShowNodeObjsCount) - allNodeObjs.Count;
 
             if (offset > 0)
@@ -478,7 +537,8 @@ namespace Tianbo.Wang
                 }
             }
 
-            if (canShowNodes.Count >= curShowObjLastIndex)
+            curShowObjLastIndex = Mathf.Clamp(curShowObjLastIndex, allNodeObjs.Count, canShowNodes.Count);
+            if (canShowNodes.Count >= curShowObjLastIndex && curShowObjLastIndex >= maxShowNodeObjsCount)
             {
                 //开启滑动
                 canMove = true;
@@ -519,6 +579,14 @@ namespace Tianbo.Wang
                 }
             }
 
+            RefreshScrollSlider();
+        }
+
+        /// <summary>
+        /// 在每次物体刷新后刷新滑动条尺寸
+        /// </summary>
+        private void RefreshScrollSlider()
+        {
             if (scrollbar == null)
             {
                 return;
@@ -529,6 +597,7 @@ namespace Tianbo.Wang
                 float scrollBarSizeX = scrollbar.transform.GetRectTransform().GetSize().x;
                 RefreshObjParentSize(parent.parent.GetRectTransform().GetSize().x - scrollBarSizeX, new Vector3(parent.parent.GetRectTransform().GetCenter().x - scrollBarSizeX / 2f, parent.position.y, parent.position.z));
                 scrollbar.size = (float)allNodeObjs.Count / (float)canShowNodes.Count;
+
                 SetScrollBarValue();
                 scrollbar.gameObject.SetActive(true);
             }
@@ -559,7 +628,7 @@ namespace Tianbo.Wang
             NodeItem tempNodeItem = tempItemObj.GetComponent<NodeItem>();
             tempItemObj.name = itemInfo.nodeName;
             tempNodeItem.nodeInfo = itemInfo;
-            tempNodeItem.Init(itemInfo.childNodes.Count > 0, isStaticAndOpenAlways);
+            tempNodeItem.Init(itemInfo.childNodes.Count > 0, isStaticAndOpenAlways, isClickIconOpen);
             tempNodeItem.MouseClickAction = MouseClickAction;
             tempNodeItem.IsSelected = itemInfo.isSelected;
             tempNodeItem.Open = itemInfo.isOpen;
@@ -575,18 +644,109 @@ namespace Tianbo.Wang
 
             SetNodeItemInfo?.Invoke(tempNodeItem);
         }
-
-        private void SelectNodeAction(NodeItem _nodeItem, bool _isSelected)
+        /// <summary>
+        /// 鼠标点击节点的事件，从每个几点发出
+        /// </summary>
+        /// <param name="obj"></param>
+        private void MouseClickAction(NodeItem obj)
         {
-            ChangeNodeSelectStateAction?.Invoke(_nodeItem, _isSelected);
+            inSideClick = true;
+            if (!Input.GetKey(KeyCode.LeftControl))
+            {
+                UnselectNodes();
+                selectedNodes.Add(obj.nodeInfo);
+            }
+            else
+            {
+                if (!selectedNodes.Contains(obj.nodeInfo))
+                {
+                    selectedNodes.Add(obj.nodeInfo);
+                }
+                else
+                {
+                    obj.IsSelected = false;
+                    selectedNodes.Remove(obj.nodeInfo);
+                }
+            }
+
+            RefreshSelectNodeState();
+
+            RefreshCanShowItem();
+
+            RefreshNodesObjs();
+
+
+            ClickNodeAction?.Invoke(selectedNodes.ToArray());
         }
 
+        /// <summary>
+        /// 获取到selectedNodes后，刷新选中状态
+        /// </summary>
+        void RefreshSelectNodeState()
+        {
+            isClick = true;
+            if (selectedNodes.Count <= 0)
+            {
+                SetNodeListNoSelect();
+                return;
+            }
+
+            for (int i = 0; i < allNodeObjs.Count; i++)
+            {
+                NodeItem nodeItem = allNodeObjs[i].GetComponent<NodeItem>();
+                NodeItemSerializable nodeItemSerializable = selectedNodes.Find((p) => { return p.nodeParam == nodeItem.nodeInfo.nodeParam; });
+                if (nodeItemSerializable != null)
+                {
+                    nodeItemSerializable.isSelected = true;
+                    nodeItem.IsSelected = true;
+                }
+                else
+                {
+                    nodeItem.IsSelected = false;
+                }
+            }
+            SetNodeListSelect(canShowNodes);
+            SetNodeListSelect(cantShowNodes);
+        }
+
+        void SetNodeListSelect(List<NodeItemSerializable> tempList)
+        {
+            for (int i = 0; i < tempList.Count; i++)
+            {
+                NodeItemSerializable nodeItemSerializable = selectedNodes.Find((p) => { return p.nodeParam == tempList[i].nodeParam; });
+                if (nodeItemSerializable != null)
+                {
+                    nodeItemSerializable.isSelected = true;
+                    tempList[i].isSelected = true;
+                }
+                else
+                {
+                    tempList[i].isSelected = false;
+                }
+            }
+        }
+
+        void SetNodeListNoSelect()
+        {
+            for (int i = 0; i < allNodeObjs.Count; i++)
+            {
+                NodeItem nodeItem = allNodeObjs[i].GetComponent<NodeItem>();
+                nodeItem.IsSelected = false;
+            }
+            for (int i = 0; i < canShowNodes.Count; i++)
+            {
+                canShowNodes[i].isSelected = false;
+            }
+            for (int i = 0; i < cantShowNodes.Count; i++)
+            {
+                cantShowNodes[i].isSelected = false;
+            }
+        }
 
         /// <summary>
-        /// 外部调用
+        /// 取消选中的所有节点
         /// </summary>
-        /// <param name="allSelectObjs"></param>
-        public void ClickNodeByObjects(GameObject[] allSelectObjs)
+        private void UnselectNodes()
         {
             for (int i = 0; i < selectedNodes.Count; i++)
             {
@@ -601,21 +761,50 @@ namespace Tianbo.Wang
                 }
             }
             selectedNodes.Clear();
+            SetNodeListNoSelect();
+        }
+
+        /// <summary>
+        /// 选中节点事件，节点发出
+        /// </summary>
+        /// <param name="_nodeItem"></param>
+        /// <param name="_isSelected"></param>
+        private void SelectNodeAction(NodeItem _nodeItem, bool _isSelected)
+        {
+            ChangeNodeSelectStateAction?.Invoke(_nodeItem, _isSelected);
+        }
+
+
+
+
+        #region 外部调用点击节点方法
+        /// <summary>
+        /// 外部调用
+        /// </summary>
+        /// <param name="allSelectObjs"></param>
+        public void ClickNodeByObjects(GameObject[] allSelectObjs)
+        {
+            UnselectNodes();
+
             if (allSelectObjs != null)
             {
                 for (int i = 0; i < allSelectObjs.Length; i++)
                 {
-                    selectedNodes.Add(allNodesInfo.Find((p) => { return p.nodeParam == allSelectObjs[i].name; }));
+                    selectedNodes.Add(allNodesInfo.Find((p) => { return p.nodeParam == GameObjectIDHelper.GetID(allSelectObjs[i]); }));
                     OpenParentNode(selectedNodes[i]);
                 }
             }
+
+            RefreshSelectNodeState();
+
             RefreshCanShowItem();
+
+            RefreshNodesObjs();
+
             if (selectedNodes.Count > 0 && scrollViewAutoValue && !inSideClick)
             {
                 ScrollViewAutoChangeValue(canShowNodes.FindIndex((p) => { return p.nodeParam == selectedNodes[0].nodeParam; }));
             }
-
-            RefreshSelectNodeState();
 
             inSideClick = false;
         }
@@ -623,25 +812,14 @@ namespace Tianbo.Wang
         /// <summary>
         /// 外部调用
         /// </summary>
-        public void ClickNodeInfo(string nodeItemParam)
-        {
-            NodeItemSerializable nodeItemSerializable = allNodesInfo.Find((p) => { return p.nodeParam == nodeItemParam; });
-            if (nodeItemSerializable != null)
-            {
-                OpenParentNode(nodeItemSerializable);
-                RefreshCanShowItem();
-                selectedNodes.Clear();
-                selectedNodes.Add(nodeItemSerializable);
-                RefreshSelectNodeState();
-                ClickNodeInfo(nodeItemSerializable);
-            }
-        }
-
-        /// <summary>
-        /// 外部调用
-        /// </summary>
         public void ClickNodeInfo(NodeItemSerializable nodeItemSerializable)
         {
+            OpenParentNode(nodeItemSerializable);
+
+            RefreshCanShowItem();
+
+            RefreshNodesObjs();
+
             for (int i = 0; i < allNodeObjs.Count; i++)
             {
                 NodeItem tempNodeItem = allNodeObjs[i].GetComponent<NodeItem>();
@@ -649,14 +827,19 @@ namespace Tianbo.Wang
                 {
                     if (!tempNodeItem.isStatic)
                     {
-                        nodeItemSerializable.isOpen = !nodeItemSerializable.isOpen;
-                        tempNodeItem.Open = nodeItemSerializable.isOpen;
+                        if (!isClickIconOpen)
+                        {
+                            nodeItemSerializable.isOpen = !nodeItemSerializable.isOpen;
+                            tempNodeItem.Open = nodeItemSerializable.isOpen;
+                        }
                     }
                     MouseClickAction(tempNodeItem);
                     break;
                 }
             }
         }
+
+        #endregion
 
         void OpenParentNode(NodeItemSerializable nodeItemSerializable)
         {
@@ -667,75 +850,16 @@ namespace Tianbo.Wang
             }
         }
 
-
+        /// <summary>
+        /// 自动定位slider
+        /// </summary>
+        /// <param name="selectIndex"></param>
         private void ScrollViewAutoChangeValue(int selectIndex)
         {
             curShowObjLastIndex = Mathf.Clamp(selectIndex + maxShowNodeObjsCount / 2, 0, canShowNodes.Count);
             SetScrollBarValue();
-        }
 
-        private void MouseClickAction(NodeItem obj)
-        {
-
-            inSideClick = true;
-            if (!Input.GetKey(KeyCode.LeftControl))
-            {
-                for (int i = 0; i < selectedNodes.Count; i++)
-                {
-                    selectedNodes[i].isSelected = false;
-                    for (int j = 0; j < allNodeObjs.Count; j++)
-                    {
-                        NodeItem nodeItem = allNodeObjs[j].GetComponent<NodeItem>();
-                        if (selectedNodes[i] == nodeItem.nodeInfo)
-                        {
-                            nodeItem.IsSelected = false;
-                        }
-                    }
-                }
-                selectedNodes.Clear();
-            }
-
-            selectedNodes.Add(obj.nodeInfo);
-
-
-            ClickNodeAction?.Invoke(selectedNodes.ToArray());
-
-            RefreshSelectNodeState();
-        }
-
-        void RefreshSelectNodeState()
-        {
-            isClick = true;
-            if (selectedNodes.Count <= 0)
-            {
-                return;
-            }
-            for (int i = 0; i < selectedNodes.Count; i++)
-            {
-                for (int j = 0; j < allNodeObjs.Count; j++)
-                {
-                    NodeItem nodeItem = allNodeObjs[j].GetComponent<NodeItem>();
-                    if (selectedNodes[i] == nodeItem.nodeInfo)
-                    {
-                        nodeItem.IsSelected = true;
-                    }
-                }
-                selectedNodes[i].isSelected = true;
-            }
-            RefreshSelfActiveState();
-        }
-        /// <summary>
-        /// 根据父节点判定自身是否显示隐藏
-        /// </summary>
-        public void RefreshSelfActiveState()
-        {
-            if (isStaticAndOpenAlways)
-            {
-                return;
-            }
-
-            RefreshCanShowItem();
-            InitScrollViewNodes();
+            ScrollBarChange(scrollbar.value);
         }
     }
 }

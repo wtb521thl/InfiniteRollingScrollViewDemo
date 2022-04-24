@@ -22,6 +22,12 @@ public class NodeItemEditor : Editor
             EditorGUILayout.Toggle("是否是开启状态：", nodeItem.Open);
         }
         EditorGUILayout.Toggle("是否是选中状态：", nodeItem.IsSelected);
+
+        if (nodeItem.nodeInfo.parentNode != null)
+        {
+            EditorGUILayout.LabelField("父物体：", nodeItem.nodeInfo.parentNode.nodeParam);
+        }
+
         ShowChildNodes(nodeItem.nodeInfo, 0);
     }
     void ShowChildNodes(NodeItemSerializable nodeItemSerializable, int tempIndex)

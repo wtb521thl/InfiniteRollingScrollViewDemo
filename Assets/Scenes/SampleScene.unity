@@ -270,7 +270,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 311647227}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4a050b70fc108d64f964946f6d6eeddd, type: 3}
+  m_Script: {fileID: 11500000, guid: 2477cfaa37015a04eb526a8b5d47812e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   allNodesInfo: []
@@ -284,11 +284,14 @@ MonoBehaviour:
   isStaticAndOpenAlways: 0
   canClickTwice: 1
   scrollViewAutoValue: 0
+  clickSpaceAreaUnSelect: 0
+  isClickIconOpen: 0
   limitRange: {x: 0, y: 0}
   canMove: 0
   curShowObjLastIndex: 0
   maxShowNodeObjsCount: 0
   scrollbar: {fileID: 366478315}
+  canvas: {fileID: 156538038}
 --- !u!114 &311647230
 MonoBehaviour:
   m_ObjectHideFlags: 0
